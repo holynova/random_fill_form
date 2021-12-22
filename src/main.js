@@ -2,10 +2,8 @@
 (function () {
   const log = console.log.bind(console);
   const $ = document.querySelectorAll.bind(document);
-  // import * as random from "./utils/random";
 
   function between(min = 0, max = 100) {
-    // return min + Math.random() * (max - min)
     return min + Math.floor(Math.random() * (max - min));
   }
 
@@ -14,43 +12,40 @@
     return arr[index];
   }
 
+  function delay(ms = 30) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
   class FormFiller {
     // https://www.apesk.com/mbti/dati.asp
     // https://www.apesk.com/mmpi/
+    // https://www.zixin66.com/zx-list-test.php
+
     constructor() {}
 
-    handleRadio({ isSinglePage = false, chooseType = "RANDOM" }) {
-      if (isSinglePage) {
-        // 逐个点击法, 这样每次都是选最后一个选项
-        if (chooseType === "LAST") {
-          $("input[type=radio]").forEach((ele) => {
-            ele.click();
-          });
-          return;
+    handleRadio({ chooseType = "RANDOM" }) {
+      let groupDict = {};
+      // 分组处理法, 根据name分组
+      $("input[type=radio]").forEach((ele) => {
+        let key = ele?.name || "no_name";
+        if (key in groupDict) {
+          groupDict[key] = [...groupDict[key], ele];
+        } else {
+          groupDict[key] = [ele];
         }
+      });
+
+      Object.entries(groupDict).forEach(([key, value]) => {
+        let ele = choose(value);
         if (chooseType === "FIRST") {
-          return;
+          ele = value[0];
+        } else if (chooseType === "LAST") {
+          ele = value[value.length - 1];
         }
-
-        if (chooseType === "RANDOM") {
-          let groupDict = {};
-          // 分组处理法, 根据name分组
-          $("input[type=radio]").forEach((ele) => {
-            let key = ele?.name || "no_name";
-            if (key in groupDict) {
-              groupDict[key] = [...groupDict[key], ele];
-            } else {
-              groupDict[key] = [ele];
-            }
-          });
-
-          Object.entries(groupDict).forEach(([key, value]) => {
-            let ele = choose(value);
-            ele.click();
-          });
-          return;
-        }
-      }
+        ele.click();
+      });
     }
 
     handleInput() {
@@ -63,21 +58,42 @@
       $("input[type=checkbox]").forEach((ele) => ele.click());
     }
 
-    go({ isSinglePage = false, chooseType = "RANDOM" }) {
-      this.handleInput();
-      this.handleCheckbox();
-      this.handleRadio({ isSinglePage, chooseType });
+    submit() {
+      $("input[type=submit]").forEach((ele) => ele.click());
+    }
+
+    async go({ isSinglePage = false, chooseType = "RANDOM", max = 300 }) {
+      const handleOnePage = () => {
+        this.handleInput();
+        this.handleCheckbox();
+        this.handleRadio({ chooseType });
+        this.submit();
+      };
+
+      if (isSinglePage) {
+        handleOnePage();
+        return "完成单页测试";
+      }
+
+      for (let i = 0; i < max; i++) {
+        // log("========cnt = ", i);
+        handleOnePage();
+        await delay();
+      }
+      return "完成多页测试";
     }
   }
 
   function main() {
-    console.time();
-    log("start");
+    log("开始测试");
+    console.time("完成测试");
     let f = new FormFiller();
-    f.go({ isSinglePage: true, chooseType: "RANDOM" });
-    log("done");
-    console.timeEnd();
+    f.go({ isSinglePage: false, chooseType: "RANDOM", max: 100 }).then(
+      (res) => {
+        log(res);
+        console.timeEnd("完成测试");
+      }
+    );
   }
-
   main();
 })();
